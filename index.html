@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시흥시 농작물 캘린더</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f5f0e8; color: #3a2e1e; min-height: 100vh; }
+
+  header {
+    background: linear-gradient(135deg, #4a7c3f, #6aab5e);
+    color: white;
+    padding: 24px 20px 16px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    position: relative;
+    overflow: hidden;
+  }
+  header h1 { font-size: 1.8rem; font-weight: 700; }
+  header p { font-size: 0.9rem; opacity: 0.85; margin-top: 4px; }
+  .header-stickers {
+    display: flex; justify-content: center; gap: 8px; margin-top: 10px;
+  }
+  .header-stickers svg { width: 52px; height: 52px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+
+  .month-nav {
+    display: flex; justify-content: center; align-items: center;
+    gap: 10px; padding: 14px 16px; background: #fff;
+    border-bottom: 1px solid #ddd; flex-wrap: wrap;
+  }
+  .month-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 2px solid #c8dfc4; background: white;
+    color: #4a7c3f; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .month-btn:hover { background: #e8f5e2; }
+  .month-btn.active { background: #4a7c3f; color: white; border-color: #4a7c3f; }
+
+  .season-tabs {
+    display: flex; justify-content: center; gap: 8px;
+    padding: 12px 16px; flex-wrap: wrap;
+  }
+  .season-tab {
+    padding: 6px 16px; border-radius: 20px; border: 2px solid transparent;
+    cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;
+  }
+  .season-tab[data-season="봄"] { background:#fef0f5; color:#c25f8a; border-color:#f0b8d0; }
+  .season-tab[data-season="봄"].active { background:#c25f8a; color:white; }
+  .season-tab[data-season="여름"] { background:#edf7ed; color:#3a8c3a; border-color:#a8d8a8; }
+  .season-tab[data-season="여름"].active { background:#3a8c3a; color:white; }
+  .season-tab[data-season="가을"] { background:#fff5e8; color:#c87020; border-color:#f0c080; }
+  .season-tab[data-season="가을"].active { background:#c87020; color:white; }
+  .season-tab[data-season="겨울"] { background:#eef3fa; color:#3a6aaa; border-color:#a8c0e8; }
+  .season-tab[data-season="겨울"].active { background:#3a6aaa; color:white; }
+
+  .current-info {
+    text-align: center; padding: 8px;
+    font-size: 0.95rem; color: #666;
+  }
+  .current-info strong { color: #4a7c3f; font-size: 1.05rem; }
+
+  .filter-bar {
+    display: flex; justify-content: center; gap: 8px;
+    padding: 8px 16px; flex-wrap: wrap;
+  }
+  .filter-btn {
+    padding: 4px 12px; border-radius: 14px;
+    border: 1.5px solid #c8dfc4; background: white;
+    color: #4a7c3f; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
+  }
+  .filter-btn.active { background: #4a7c3f; color: white; border-color: #4a7c3f; }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 14px; padding: 16px;
+    max-width: 1100px; margin: 0 auto;
+  }
+
+  .crop-card {
+    background: white; border-radius: 16px; padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    border-left: 5px solid #aaa;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .crop-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+  .crop-card.highlight { border-left-color: #f5a623; background: #fffbf0; }
+
+  .card-sticker {
+    display: block;
+    width: 48px; height: 48px; opacity: 0.92;
+    margin-left: auto; margin-bottom: 6px;
+    flex-shrink: 0;
+  }
+
+  .crop-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .crop-emoji { font-size: 2rem; }
+  .crop-name { font-size: 1.05rem; font-weight: 700; }
+  .crop-category { font-size: 0.75rem; color: #888; background: #f0f0f0; padding: 2px 8px; border-radius: 10px; }
+
+  .timeline-row { margin: 6px 0; }
+  .timeline-label { font-size: 0.75rem; color: #888; margin-bottom: 3px; }
+  .timeline-bar {
+    display: flex; height: 12px; border-radius: 6px;
+    overflow: hidden; background: #f0f0f0;
+  }
+  .timeline-segment { height: 100%; }
+
+  .legend { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; color: #666; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  .tip-box {
+    background: #fffbf0; border: 1px solid #f0d080;
+    border-radius: 10px; padding: 8px 12px;
+    margin-top: 10px; font-size: 0.8rem; color: #7a5a10;
+  }
+
+  .month-labels {
+    display: flex; justify-content: space-between;
+    font-size: 0.65rem; color: #aaa; padding: 0 2px; margin-top: 2px;
+  }
+
+  .status-badge {
+    font-size: 0.72rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 10px; margin-left: auto;
+  }
+
+  .no-result {
+    text-align: center; padding: 40px; color: #aaa;
+    font-size: 1rem; grid-column: 1/-1;
+  }
+
+  /* 계절 스티커 배너 */
+  .season-banner {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; padding: 8px 16px;
+    background: rgba(255,255,255,0.6);
+  }
+  .season-banner svg { width: 44px; height: 44px; }
+  .season-banner-text { font-size: 0.88rem; color: #666; }
+
+  .weather-bar {
+    display: flex; justify-content: center; gap: 12px;
+    padding: 10px 16px; flex-wrap: wrap;
+    background: linear-gradient(135deg, #e8f4ff, #f0f8ff);
+    border-bottom: 1px solid #d0e8f8;
+  }
+  .weather-card {
+    background: white; border-radius: 14px;
+    padding: 10px 18px; display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 2px 6px rgba(0,100,200,0.1);
+    min-width: 160px;
+  }
+  .weather-card .w-icon { font-size: 2rem; }
+  .weather-card .w-info { font-size: 0.8rem; color: #555; }
+  .weather-card .w-info strong { font-size: 1rem; color: #2a4a8a; display: block; }
+  .weather-card .w-info span { font-size: 0.75rem; color: #888; }
+  .weather-loading { color: #aaa; font-size: 0.85rem; padding: 12px; }
+
+  footer {
+    text-align: center; padding: 20px;
+    font-size: 0.78rem; color: #999; margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌾 시흥시 농작물 캘린더</h1>
+  <p>경기도 시흥시 기준 · 파종부터 수확까지 한눈에</p>
+  <div class="header-stickers" id="headerStickers"></div>
+</header>
+
+<div class="weather-bar" id="weatherBar"><span class="weather-loading">🌤 날씨 불러오는 중...</span></div>
+<div class="month-nav" id="monthNav"></div>
+<div class="current-info" id="currentInfo"></div>
+<div class="season-banner" id="seasonBanner"></div>
+
+<div class="season-tabs" id="seasonTabs">
+  <div class="season-tab" data-season="전체">🌍 전체</div>
+  <div class="season-tab" data-season="봄">🌸 봄</div>
+  <div class="season-tab" data-season="여름">☀️ 여름</div>
+  <div class="season-tab" data-season="가을">🍂 가을</div>
+  <div class="season-tab" data-season="겨울">❄️ 겨울</div>
+</div>
+
+<div class="filter-bar" id="filterBar">
+  <button class="filter-btn active" data-cat="전체">전체</button>
+  <button class="filter-btn" data-cat="채소">🥬 채소</button>
+  <button class="filter-btn" data-cat="과일">🍅 과일·열매</button>
+  <button class="filter-btn" data-cat="곡류">🌾 곡류</button>
+  <button class="filter-btn" data-cat="뿌리">🥕 뿌리채소</button>
+</div>
+
+<div class="cards-grid" id="cardsGrid"></div>
+
+<footer>📍 경기도 시흥시 기준 · 기후 변화에 따라 시기가 다소 달라질 수 있습니다</footer>
+
+<script>
+const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+/* ── SVG 스티커 ── */
+const SVG = {
+  씨앗심기: `<svg viewBox="0 0 560 520" xmlns="http://www.w3.org/2000/svg"><rect x="40" y="430" width="480" height="60" rx="14" fill="#8B5E3C" opacity="0.5"/><ellipse cx="175" cy="430" rx="11" ry="7" fill="#c8a060"/><ellipse cx="280" cy="425" rx="11" ry="7" fill="#c8a060"/><ellipse cx="385" cy="430" rx="11" ry="7" fill="#c8a060"/><path d="M175 430 Q170 410 163 398" stroke="#4a9a30" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="160" cy="394" rx="10" ry="7" fill="#5aba40" transform="rotate(-20 160 394)"/><path d="M385 430 Q390 410 397 398" stroke="#4a9a30" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="400" cy="394" rx="10" ry="7" fill="#5aba40" transform="rotate(20 400 394)"/><circle cx="280" cy="235" r="152" fill="white" stroke="#2a1a0a" stroke-width="14"/><path d="M212 128 Q280 64 348 128" stroke="#5b9bd5" stroke-width="18" fill="#5b9bd5" opacity="0.85"/><path d="M232 232 Q242 219 252 232" stroke="#2a1a0a" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M308 232 Q318 219 328 232" stroke="#2a1a0a" stroke-width="7" fill="none" stroke-linecap="round"/><ellipse cx="198" cy="258" rx="28" ry="20" fill="#f4a0a0" opacity="0.5"/><ellipse cx="362" cy="258" rx="28" ry="20" fill="#f4a0a0" opacity="0.5"/><path d="M234 282 Q280 316 326 282" stroke="#2a1a0a" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M218 355 Q238 405 280 415 Q322 405 342 355" stroke="#5bb5d5" stroke-width="22" fill="none" stroke-linecap="round"/><path d="M335 318 Q375 340 392 380" stroke="#2a1a0a" stroke-width="16" fill="none" stroke-linecap="round"/><ellipse cx="394" cy="388" rx="22" ry="15" fill="#c8a060" stroke="#2a1a0a" stroke-width="9"/></svg>`,
+  수확기쁨: `<svg viewBox="0 0 560 540" xmlns="http://www.w3.org/2000/svg"><ellipse cx="280" cy="490" rx="125" ry="42" fill="#c89040" stroke="#8b5e1a" stroke-width="9"/><rect x="155" y="422" width="250" height="72" rx="15" fill="#d4a050" stroke="#8b5e1a" stroke-width="9"/><circle cx="220" cy="416" r="25" fill="#e03030" stroke="#2a1a0a" stroke-width="7"/><circle cx="280" cy="411" r="27" fill="#f5a020" stroke="#2a1a0a" stroke-width="7"/><circle cx="336" cy="416" r="23" fill="#e03030" stroke="#2a1a0a" stroke-width="7"/><circle cx="280" cy="232" r="165" fill="#f5e07a" stroke="#2a1a0a" stroke-width="14"/><ellipse cx="280" cy="106" rx="182" ry="36" fill="#d4a017" stroke="#2a1a0a" stroke-width="11"/><ellipse cx="280" cy="94" rx="113" ry="48" fill="#d4a017" stroke="#2a1a0a" stroke-width="11"/><path d="M225 232 Q240 217 255 232" stroke="#2a1a0a" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M305 232 Q320 217 335 232" stroke="#2a1a0a" stroke-width="8" fill="none" stroke-linecap="round"/><ellipse cx="195" cy="260" rx="35" ry="25" fill="#e8a060" opacity="0.6"/><ellipse cx="365" cy="260" rx="35" ry="25" fill="#e8a060" opacity="0.6"/><path d="M215 290 Q280 348 345 290" stroke="#2a1a0a" stroke-width="10" fill="none" stroke-linecap="round"/></svg>`,
+  물주기: `<svg viewBox="0 0 560 520" xmlns="http://www.w3.org/2000/svg"><ellipse cx="408" cy="268" rx="52" ry="38" fill="#80c8f0" stroke="#2a1a0a" stroke-width="10"/><path d="M452 268 Q484 248 494 286" stroke="#2a1a0a" stroke-width="9" fill="none" stroke-linecap="round"/><ellipse cx="408" cy="310" rx="5" ry="8" fill="#60b8e8" opacity="0.65"/><ellipse cx="422" cy="326" rx="4" ry="7" fill="#60b8e8" opacity="0.55"/><ellipse cx="432" cy="300" rx="4" ry="6" fill="#60b8e8" opacity="0.55"/><circle cx="182" cy="282" r="142" fill="#f5e07a" stroke="#2a1a0a" stroke-width="12"/><ellipse cx="182" cy="178" rx="80" ry="43" fill="#3a7a35" stroke="#2a1a0a" stroke-width="10"/><path d="M138 285 Q143 268 160 283" stroke="#2a1a0a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M200 283 Q217 268 222 285" stroke="#2a1a0a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M136 320 Q182 354 228 320" stroke="#2a1a0a" stroke-width="8" fill="none" stroke-linecap="round"/><ellipse cx="110" cy="308" rx="28" ry="20" fill="#e8a060" opacity="0.5"/><ellipse cx="254" cy="308" rx="28" ry="20" fill="#e8a060" opacity="0.5"/><path d="M233 333 Q298 295 350 268" stroke="#2a1a0a" stroke-width="14" fill="none" stroke-linecap="round"/><circle cx="430" cy="410" r="96" fill="white" stroke="#2a1a0a" stroke-width="11"/><path d="M386 352 Q430 288 474 352" stroke="#5b9bd5" stroke-width="13" fill="#5b9bd5" opacity="0.85"/><path d="M406 408 Q411 398 419 408" stroke="#2a1a0a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M440 408 Q448 398 456 408" stroke="#2a1a0a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M408 432 Q430 448 452 432" stroke="#2a1a0a" stroke-width="7" fill="none" stroke-linecap="round"/></svg>`,
+  수확같이: `<svg viewBox="0 0 560 520" xmlns="http://www.w3.org/2000/svg"><rect x="25" y="458" width="510" height="52" rx="12" fill="#8B5E3C" opacity="0.42"/><ellipse cx="148" cy="456" rx="22" ry="13" fill="#5aba40" stroke="#2a1a0a" stroke-width="5"/><rect x="136" y="432" width="22" height="26" rx="4" fill="#f0c030" stroke="#2a1a0a" stroke-width="5"/><ellipse cx="280" cy="454" rx="19" ry="11" fill="#5aba40" stroke="#2a1a0a" stroke-width="5"/><rect x="268" y="432" width="22" height="24" rx="4" fill="#e85030" stroke="#2a1a0a" stroke-width="5"/><ellipse cx="412" cy="456" rx="21" ry="12" fill="#5aba40" stroke="#2a1a0a" stroke-width="5"/><circle cx="172" cy="278" r="140" fill="#f5e07a" stroke="#2a1a0a" stroke-width="12"/><ellipse cx="172" cy="172" rx="82" ry="44" fill="#3a7a35" stroke="#2a1a0a" stroke-width="10"/><path d="M128 280 Q135 263 152 278" stroke="#2a1a0a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M190 278 Q207 263 212 280" stroke="#2a1a0a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M128 316 Q172 350 216 316" stroke="#2a1a0a" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="385" cy="278" r="140" fill="white" stroke="#2a1a0a" stroke-width="12"/><path d="M328 170 Q385 106 442 170" stroke="#5b9bd5" stroke-width="14" fill="#5b9bd5" opacity="0.85"/><path d="M344 280 Q349 263 366 278" stroke="#2a1a0a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M403 278 Q420 263 425 280" stroke="#2a1a0a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M342 316 Q385 350 428 316" stroke="#2a1a0a" stroke-width="8" fill="none" stroke-linecap="round"/></svg>`,
+  봄파종: `<svg viewBox="0 0 560 520" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="460" width="500" height="52" rx="12" fill="#8B5E3C" opacity="0.45"/><circle cx="178" cy="460" r="10" fill="#c8a060" opacity="0.8"/><circle cx="382" cy="460" r="10" fill="#c8a060" opacity="0.8"/><circle cx="172" cy="278" r="138" fill="#f5e07a" stroke="#2a1a0a" stroke-width="12"/><ellipse cx="172" cy="175" rx="80" ry="42" fill="#3a7a35" stroke="#2a1a0a" stroke-width="10"/><path d="M128 280 Q133 263 150 278" stroke="#2a1a0a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M190 278 Q207 263 212 280" stroke="#2a1a0a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M127 316 Q172 350 217 316" stroke="#2a1a0a" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="388" cy="278" r="138" fill="white" stroke="#2a1a0a" stroke-width="12"/><path d="M332 172 Q388 108 444 172" stroke="#5b9bd5" stroke-width="14" fill="#5b9bd5" opacity="0.85"/><path d="M346 280 Q351 263 368 278" stroke="#2a1a0a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M406 278 Q423 263 428 280" stroke="#2a1a0a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M344 316 Q388 350 432 316" stroke="#2a1a0a" stroke-width="8" fill="none" stroke-linecap="round"/><text x="280" y="188" text-anchor="middle" font-size="36" font-family="sans-serif">🌱</text></svg>`,
+  풍년: `<svg viewBox="0 0 560 520" xmlns="http://www.w3.org/2000/svg"><rect x="26" y="58" width="186" height="66" rx="14" fill="white" stroke="#2a1a0a" stroke-width="8"/><text x="119" y="102" text-anchor="middle" font-size="30" font-weight="600" font-family="sans-serif" fill="#2a1a0a">최고</text><rect x="348" y="58" width="186" height="66" rx="14" fill="white" stroke="#2a1a0a" stroke-width="8"/><text x="441" y="102" text-anchor="middle" font-size="30" font-weight="600" font-family="sans-serif" fill="#2a1a0a">최고</text><circle cx="172" cy="304" r="137" fill="#f5e07a" stroke="#2a1a0a" stroke-width="12"/><ellipse cx="172" cy="190" rx="152" ry="29" fill="#d4a017" stroke="#2a1a0a" stroke-width="10"/><ellipse cx="172" cy="178" rx="96" ry="43" fill="#d4a017" stroke="#2a1a0a" stroke-width="10"/><path d="M130 306 Q141 291 152 306" stroke="#2a1a0a" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M192 306 Q203 291 214 306" stroke="#2a1a0a" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M128 355 Q172 392 216 355" stroke="#2a1a0a" stroke-width="9" fill="none" stroke-linecap="round"/><circle cx="388" cy="304" r="137" fill="white" stroke="#2a1a0a" stroke-width="12"/><path d="M332 192 Q388 124 444 192" stroke="#5b9bd5" stroke-width="14" fill="#5b9bd5" opacity="0.85"/><path d="M347 306 Q358 291 369 306" stroke="#2a1a0a" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M408 306 Q419 291 430 306" stroke="#2a1a0a" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M345 355 Q388 392 431 355" stroke="#2a1a0a" stroke-width="9" fill="none" stroke-linecap="round"/></svg>`,
+  탈진: `<svg viewBox="0 0 560 520" xmlns="http://www.w3.org/2000/svg"><circle cx="235" cy="352" r="152" fill="#f5e07a" stroke="#2a1a0a" stroke-width="13"/><ellipse cx="105" cy="462" rx="82" ry="21" fill="#d4a017" stroke="#2a1a0a" stroke-width="9" transform="rotate(-14 105 462)"/><ellipse cx="103" cy="453" rx="54" ry="27" fill="#d4a017" stroke="#2a1a0a" stroke-width="9" transform="rotate(-14 103 453)"/><line x1="193" y1="343" x2="213" y2="358" stroke="#2a1a0a" stroke-width="8" stroke-linecap="round"/><line x1="253" y1="358" x2="273" y2="343" stroke="#2a1a0a" stroke-width="8" stroke-linecap="round"/><path d="M196 400 Q235 386 274 400" stroke="#2a1a0a" stroke-width="8" fill="none" stroke-linecap="round"/><text x="318" y="285" font-size="30" fill="#bbb" font-family="sans-serif">z</text><text x="352" y="250" font-size="22" fill="#bbb" font-family="sans-serif">z</text></svg>`,
+};
+
+// 월→스티커 매핑
+const monthStickers = {
+  1: SVG.탈진, 2: SVG.씨앗심기, 3: SVG.봄파종, 4: SVG.봄파종,
+  5: SVG.물주기, 6: SVG.물주기, 7: SVG.수확기쁨, 8: SVG.수확기쁨,
+  9: SVG.수확같이, 10: SVG.수확같이, 11: SVG.풍년, 12: SVG.탈진,
+};
+
+// 상태→스티커
+const statusStickers = { sow: SVG.씨앗심기, grow: SVG.물주기, harvest: SVG.수확기쁨 };
+
+const crops = [
+  { name:'상추', emoji:'🥬', cat:'채소', season:['봄','여름'], sow:[3,4,8,9], grow:[3,4,5,8,9,10], harvest:[4,5,6,9,10,11], tip:'서늘한 기후를 좋아해요. 4월과 9월이 파종 최적기입니다.' },
+  { name:'시금치', emoji:'🌿', cat:'채소', season:['봄','가을'], sow:[3,4,9,10], grow:[3,4,5,9,10,11], harvest:[4,5,6,10,11,12], tip:'추위에 강해 가을 파종 후 겨울을 넘기기도 합니다.' },
+  { name:'고추', emoji:'🌶️', cat:'채소', season:['여름'], sow:[2,3], grow:[4,5,6,7,8], harvest:[7,8,9,10], tip:'4~5월 사이 식재, 충분한 햇빛이 중요해요!' },
+  { name:'토마토', emoji:'🍅', cat:'과일', season:['여름'], sow:[2,3], grow:[4,5,6,7], harvest:[6,7,8,9], tip:'모종 이식 후 지주대를 꼭 세워주세요. 물 관리가 핵심입니다.' },
+  { name:'오이', emoji:'🥒', cat:'과일', season:['여름'], sow:[4,5], grow:[5,6,7], harvest:[6,7,8], tip:'따뜻할 때 파종하고 덩굴이 잘 뻗을 수 있게 지지대를 설치하세요.' },
+  { name:'감자', emoji:'🥔', cat:'뿌리', season:['봄','가을'], sow:[3,4,8], grow:[3,4,5,8,9], harvest:[6,7,10,11], tip:'봄 감자는 3~4월, 가을 감자는 8월에 심어요. 씨감자 준비가 중요해요.' },
+  { name:'고구마', emoji:'🍠', cat:'뿌리', season:['여름'], sow:[5], grow:[5,6,7,8], harvest:[9,10], tip:'5월 중순~하순 모종 심기. 두둑을 높게 만들어 배수가 잘 되도록 해요.' },
+  { name:'배추', emoji:'🥬', cat:'채소', season:['가을'], sow:[8,9], grow:[8,9,10], harvest:[10,11,12], tip:'김장 배추는 8월 말~9월 초 파종이 핵심! 서늘한 날씨에 잘 자랍니다.' },
+  { name:'무', emoji:'🫚', cat:'뿌리', season:['가을'], sow:[8,9], grow:[9,10,11], harvest:[10,11,12], tip:'가을 무는 8월 하순~9월 파종. 깊게 갈아엎은 땅에서 잘 자랍니다.' },
+  { name:'대파', emoji:'🌱', cat:'채소', season:['봄','가을'], sow:[3,4,8,9], grow:[3,4,5,6,8,9,10,11], harvest:[5,6,7,10,11,12], tip:'연중 재배 가능. 옮겨심기 전 충분히 육묘하는 것이 좋아요.' },
+  { name:'마늘', emoji:'🧄', cat:'뿌리', season:['가을','겨울'], sow:[9,10], grow:[10,11,12,1,2,3,4,5], harvest:[5,6], tip:'가을에 심어 겨울을 나며 봄에 수확해요. 시흥 지역은 10월 초 파종 권장.' },
+  { name:'옥수수', emoji:'🌽', cat:'곡류', season:['여름'], sow:[4,5], grow:[5,6,7], harvest:[7,8], tip:'한 구멍에 2~3알씩 파종 후 솎아내기. 바람에 쓰러지지 않게 북주기 필요.' },
+  { name:'콩', emoji:'🫘', cat:'곡류', season:['여름'], sow:[5,6], grow:[6,7,8], harvest:[9,10], tip:'배수가 잘 되는 땅에서 잘 자라요. 두 포기씩 심으면 수분이 잘 됩니다.' },
+  { name:'호박', emoji:'🎃', cat:'과일', season:['여름'], sow:[4,5], grow:[5,6,7,8], harvest:[7,8,9], tip:'넓은 공간이 필요해요. 덩굴이 잘 뻗을 수 있도록 공간을 확보하세요.' },
+  { name:'당근', emoji:'🥕', cat:'뿌리', season:['봄','가을'], sow:[3,4,8], grow:[4,5,6,8,9,10], harvest:[6,7,10,11], tip:'씨앗이 작아 얕게 심는 것이 포인트. 솎아내기를 꼭 해주세요.' },
+  { name:'브로콜리', emoji:'🥦', cat:'채소', season:['봄','가을'], sow:[3,8], grow:[3,4,5,8,9,10], harvest:[5,6,10,11], tip:'서늘한 기후에서 잘 자라요. 가을 재배 시 병충해가 적어 관리가 쉽습니다.' },
+];
+
+let currentMonth = new Date().getMonth() + 1;
+let selectedSeason = '전체';
+let selectedCat = '전체';
+
+function getSeason(m) {
+  if ([3,4,5].includes(m)) return '봄';
+  if ([6,7,8].includes(m)) return '여름';
+  if ([9,10,11]) return '가을';
+  return '겨울';
+}
+function getSeasonForMonth(m) {
+  if ([3,4,5].includes(m)) return '봄';
+  if ([6,7,8].includes(m)) return '여름';
+  if ([9,10,11].includes(m)) return '가을';
+  return '겨울';
+}
+
+function getStatus(crop, month) {
+  if (crop.harvest.includes(month)) return 'harvest';
+  if (crop.grow.includes(month)) return 'grow';
+  if (crop.sow.includes(month)) return 'sow';
+  return null;
+}
+
+function buildHeader() {
+  const svgs = [SVG.봄파종, SVG.물주기, SVG.수확기쁨, SVG.풍년];
+  document.getElementById('headerStickers').innerHTML =
+    svgs.map(s => `<div style="width:52px;height:52px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2))">${s}</div>`).join('');
+}
+
+function buildMonthNav() {
+  const colors = { '봄':'#c25f8a','여름':'#3a8c3a','가을':'#c87020','겨울':'#3a6aaa' };
+  document.getElementById('monthNav').innerHTML = MONTHS.map((m,i) => {
+    const mo = i+1, s = getSeasonForMonth(mo);
+    return `<button class="month-btn ${mo===currentMonth?'active':''}"
+      style="${mo===currentMonth?`background:${colors[s]};border-color:${colors[s]};color:white`:''}"
+      onclick="selectMonth(${mo})">${m}</button>`;
+  }).join('');
+}
+
+function buildInfo() {
+  const s = getSeasonForMonth(currentMonth);
+  const e = {'봄':'🌸','여름':'☀️','가을':'🍂','겨울':'❄️'};
+  document.getElementById('currentInfo').innerHTML =
+    `현재 선택: <strong>${currentMonth}월 (${e[s]} ${s})</strong> — 이 시기에 맞는 농작물을 확인하세요`;
+}
+
+function buildBanner() {
+  const sticker = monthStickers[currentMonth];
+  const msgs = {
+    sow:'파종 시기에요! 씨앗을 준비해 보세요 🌱',
+    grow:'한창 자라는 시기예요. 물과 비료를 챙겨주세요 💧',
+    harvest:'수확의 계절이에요! 열심히 거둬들여요 🧺',
+  };
+  // 이번 달에 해당하는 상태 중 가장 많은 것
+  const counts = { sow:0, grow:0, harvest:0 };
+  crops.forEach(c => { const st = getStatus(c, currentMonth); if (st) counts[st]++; });
+  const top = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
+  document.getElementById('seasonBanner').innerHTML =
+    `<div style="width:48px;height:48px">${sticker}</div>
+     <span class="season-banner-text">${msgs[top]}</span>`;
+}
+
+function buildSeasonTabs() {
+  document.querySelectorAll('.season-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.season === selectedSeason));
+}
+
+function buildBar(crop) {
+  const colors = { sow:'#80c980', grow:'#4a9c4a', harvest:'#e07830', null:'#f0f0f0' };
+  const w = (100/12).toFixed(2)+'%';
+  return `<div class="timeline-bar">
+    ${Array.from({length:12},(_,i)=>{
+      const st = getStatus(crop,i+1);
+      return `<div class="timeline-segment" style="width:${w};background:${colors[st]};${i+1===currentMonth?'outline:2px solid #333;z-index:1':''}"></div>`;
+    }).join('')}
+  </div>
+  <div class="month-labels">${MONTHS.map(m=>`<span>${m.replace('월','')}</span>`).join('')}</div>`;
+}
+
+function buildCards() {
+  const grid = document.getElementById('cardsGrid');
+  const catColors = { '채소':'#4a7c3f','과일':'#c83030','곡류':'#c87020','뿌리':'#8a5020' };
+  const stColors = { harvest:'#e07830', sow:'#4a9c4a', grow:'#4a7c3f' };
+  const stLabels = { sow:'🌱 지금 파종 시기', grow:'🌿 지금 재배 중', harvest:'🧺 지금 수확 시기' };
+
+  let list = crops.filter(c =>
+    (selectedCat==='전체'||c.cat===selectedCat) &&
+    (selectedSeason==='전체'||c.season.includes(selectedSeason))
+  );
+  list = list.map(c=>({crop:c,st:getStatus(c,currentMonth)}))
+    .sort((a,b)=>({harvest:0,sow:1,grow:2,null:3}[a.st]-{harvest:0,sow:1,grow:2,null:3}[b.st]));
+
+  if (!list.length) { grid.innerHTML='<div class="no-result">해당 조건의 농작물이 없습니다 🌱</div>'; return; }
+
+  grid.innerHTML = list.map(({crop:c,st})=>`
+    <div class="crop-card ${st?'highlight':''}">
+
+      <div class="crop-header">
+        <span class="crop-emoji">${c.emoji}</span>
+        <div>
+          <div class="crop-name">${c.name}</div>
+          <span class="crop-category" style="color:${catColors[c.cat]}">${c.cat}</span>
+        </div>
+        ${st ? `<span class="status-badge" style="color:${stColors[st]}">${stLabels[st]}</span>
+        <div class="card-sticker">${statusStickers[st]}</div>` : ''}
+      </div>
+      <div class="timeline-row">
+        <div class="timeline-label">📅 연간 일정</div>
+        ${buildBar(c)}
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#80c980"></div>파종</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#4a9c4a"></div>재배</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#e07830"></div>수확</div>
+      </div>
+      <div class="tip-box">💡 ${c.tip}</div>
+    </div>`).join('');
+}
+
+function selectMonth(m) { currentMonth=m; render(); }
+function render() { buildMonthNav(); buildInfo(); buildBanner(); buildSeasonTabs(); buildCards(); }
+
+document.getElementById('seasonTabs').addEventListener('click', e=>{
+  const t=e.target.closest('.season-tab'); if(!t) return;
+  selectedSeason=t.dataset.season; render();
+});
+document.getElementById('filterBar').addEventListener('click', e=>{
+  const b=e.target.closest('.filter-btn'); if(!b) return;
+  selectedCat=b.dataset.cat;
+  document.querySelectorAll('.filter-btn').forEach(x=>x.classList.toggle('active',x.dataset.cat===selectedCat));
+  buildCards();
+});
+
+function weatherIcon(code) {
+  if (code === 0) return '☀️';
+  if (code <= 2) return '🌤';
+  if (code <= 3) return '☁️';
+  if (code <= 48) return '🌫';
+  if (code <= 57) return '🌦';
+  if (code <= 67) return '🌧';
+  if (code <= 77) return '🌨';
+  if (code <= 82) return '🌧';
+  if (code <= 86) return '❄️';
+  return '⛈';
+}
+function weatherDescKo(code) {
+  if (code === 0) return '맑음';
+  if (code <= 2) return '대체로 맑음';
+  if (code <= 3) return '흐림';
+  if (code <= 48) return '안개';
+  if (code <= 57) return '이슬비';
+  if (code <= 67) return '비';
+  if (code <= 77) return '눈';
+  if (code <= 82) return '소나기';
+  if (code <= 86) return '눈';
+  return '천둥번개';
+}
+async function fetchWeather() {
+  const bar = document.getElementById('weatherBar');
+  bar.innerHTML = '<span class="weather-loading">🌤 날씨 불러오는 중...</span>';
+
+  // 여러 API 순서대로 시도
+  const apis = [
+    async () => {
+      const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.38&longitude=126.80&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul&forecast_days=2', { mode: 'cors' });
+      const d = await res.json();
+      return d.daily.weather_code.map((code, i) => ({
+        label: ['오늘','내일'][i],
+        date: d.daily.time[i],
+        code, max: Math.round(d.daily.temperature_2m_max[i]),
+        min: Math.round(d.daily.temperature_2m_min[i])
+      }));
+    },
+    async () => {
+      const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.38&longitude=126.80&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=2');
+      const d = await res.json();
+      return d.daily.weather_code.map((code, i) => ({
+        label: ['오늘','내일'][i],
+        date: d.daily.time[i],
+        code, max: Math.round(d.daily.temperature_2m_max[i]),
+        min: Math.round(d.daily.temperature_2m_min[i])
+      }));
+    }
+  ];
+
+  for (let i = 0; i < apis.length; i++) {
+    try {
+      const days = await apis[i]();
+      bar.innerHTML = days.map(({ label, date, code, max, min }) => {
+        const [,mm,dd] = date.split('-');
+        return `<div class="weather-card">
+          <div class="w-icon">${weatherIcon(code)}</div>
+          <div class="w-info">
+            <strong>${label} (${parseInt(mm)}/${parseInt(dd)})</strong>
+            ${weatherDescKo(code)} · ${max}° / <span>${min}°</span>
+          </div>
+        </div>`;
+      }).join('');
+      return; // 성공하면 종료
+    } catch(e) {
+      console.warn(`API ${i+1} 실패:`, e.message);
+    }
+  }
+
+  // 모두 실패 시 — 날씨 직접 표시 불가 안내
+  bar.innerHTML = '<span class="weather-loading">⚠️ 날씨를 불러올 수 없어요. 네트워크를 확인해 주세요.</span>';
+}
+
+buildHeader();
+fetchWeather();
+render();
+</script>
+</body>
+</html>
